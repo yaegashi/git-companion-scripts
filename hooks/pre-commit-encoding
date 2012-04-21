@@ -1,0 +1,93 @@
+#!/usr/bin/env perl
+
+# Git pre-commit hook script to verify text encoding and newline characters.
+# Copyright (c) 2012 Takeshi Yaegashi.
+# License: MIT
+
+# Works with Perl 5.8.  The bundled perl in msysgit is also supported.
+
+# Default encodings allowed to be committed.
+# See http://search.cpan.org/perldoc?Encode::Supported
+# They can be followed by the following suffixes:
+#   UTF-8 with BOM: -with-signature
+#   Newline characters: -dos or -mac or -unix
+# Examples:
+#   ascii utf-8 (any newline characters allowed)
+#   ascii-dos utf-8-with-signature-dos
+#   utf-16 utf-16-be utf-16-le
+my @allowed = qw/ascii utf-8/;
+
+# Encodings possible to be seen.
+my @possible = qw/euc-jp shiftjis 7bit-jis/;
+
+use strict;
+use warnings;
+use Encode;
+use Encode::Guess;
+Encode::Guess->set_suspects(@possible);
+
+my @canonical_allowed = ();
+
+@allowed = @ARGV if @ARGV > 0;
+
+for (@allowed) {
+        /(.*?)(-with-signature)?(-dos|-mac|-unix)?$/;
+        my $e = $1;
+        my $s = $2 || "";
+        my $n = $3 || "";
+        my $encoder = find_encoding($e);
+        die "Unknown encoding: $e\n" unless ref $encoder;
+        my $c = $encoder->name;
+        # Fix blacklisted canonical encodings.
+        $c =~ s/utf-8-strict/utf8/;
+        my @a = ("-unknown");
+        push @a, $n ? $n : ("-dos", "-mac", "-unix");
+        push @canonical_allowed, $c.$s.$_ for @a;
+}
+
+my $failed = 0;
+
+open my $files, "-|", qw/git diff --cached --numstat --diff-filter=ACM/;
+
+while (<$files>) {
+        chomp;
+        (my $add, my $del, my $file) = split(/\s+/, $_, 3);
+        next if $add eq '-'; # Skip binary files.
+        my $fh;
+        unless (open $fh, "<", $file) {
+                print "$file: $!\n";
+                $failed++;
+                next;
+        }
+        binmode $fh;
+        read $fh, my $data, (-s $file);
+        close $fh;
+        next unless length($data) > 0;
+        my $decoder = Encode::Guess->guess($data);
+        my $encoding;
+        if (ref $decoder) {
+                $encoding = $decoder->name;
+                my $utf8 = $decoder->decode($data);
+                if ($encoding eq "utf8" && $utf8 =~ /^\x{feff}/) {
+                        $encoding .= "-with-signature";
+                }
+                if    ($utf8 =~ /\r\n/ms) { $encoding .= "-dos"; }
+                elsif ($utf8 =~ /\r/ms)   { $encoding .= "-mac"; }
+                elsif ($utf8 =~ /\n/ms)   { $encoding .= "-unix"; }
+                else                      { $encoding .= "-unknown"; }
+        }
+        else {
+                $encoding = $decoder;
+        }
+        unless (grep { $encoding eq $_ } @canonical_allowed) {
+                print "$file: $encoding\n";
+                $failed++;
+        }
+}
+
+close $files;
+
+if ($failed > 0) {
+        print "Commit aborted! (allowed encodings: @allowed)\n";
+        exit 1;
+}
