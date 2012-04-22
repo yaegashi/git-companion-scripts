@@ -1,0 +1,4 @@
+This is
+English text
+
+with newline characters.
