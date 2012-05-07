@@ -15,7 +15,7 @@
 #   ascii utf-8 (any newline characters allowed)
 #   ascii-dos utf-8-with-signature-dos
 #   utf-16 utf-16-be utf-16-le
-my @allowed = qw/ascii utf-8/;
+my $default_allowed = "ascii,utf-8";
 
 # Encodings possible to be seen.
 my @possible = qw/euc-jp shiftjis 7bit-jis/;
@@ -26,33 +26,38 @@ use Encode;
 use Encode::Guess;
 Encode::Guess->set_suspects(@possible);
 
-my @canonical_allowed = ();
+$default_allowed = shift @ARGV if @ARGV > 0;
 
-@allowed = @ARGV if @ARGV > 0;
-
-for (@allowed) {
-        /(.*?)(-with-signature)?(-dos|-mac|-unix)?$/;
-        my $e = $1;
-        my $s = $2 || "";
-        my $n = $3 || "";
-        my $encoder = find_encoding($e);
-        die "Unknown encoding: $e\n" unless ref $encoder;
-        my $c = $encoder->name;
-        # Fix blacklisted canonical encodings.
-        $c =~ s/utf-8-strict/utf8/;
-        my @a = ("-unknown");
-        push @a, $n ? $n : ("-dos", "-mac", "-unix");
-        push @canonical_allowed, $c.$s.$_ for @a;
+sub canonical_allowed {
+        my $_ = shift;
+        my @args = split /,/;
+        my @ca = ();
+        for (@args) {
+                /(.*?)(-with-signature)?(-dos|-mac|-unix)?$/;
+                my $e = $1;
+                my $s = $2 || "";
+                my $n = $3 || "";
+                my $encoder = find_encoding($e);
+                die "Unknown encoding: $e\n" unless ref $encoder;
+                my $c = $encoder->name;
+                # Fix blacklisted canonical encodings.
+                $c =~ s/utf-8-strict/utf8/;
+                my @a = ("-unknown");
+                push @a, $n ? $n : ("-dos", "-mac", "-unix");
+                push @ca, $c.$s.$_ for @a;
+        }
+        return @ca;
 }
 
 my $failed = 0;
 
-open my $files, "-|", qw/git diff --cached --numstat --diff-filter=ACM/;
+open my $files, "git diff --cached --name-only --diff-filter=ACM | git check-attr --stdin encoding|";
 
 while (<$files>) {
         chomp;
-        (my $add, my $del, my $file) = split(/\s+/, $_, 3);
-        next if $add eq '-'; # Skip binary files.
+        (my $file, my $attr, my $info) = split /: /;
+        next if $info eq "unspecified" || $info eq "unset";
+        my $allowed = $info eq "set" ? $default_allowed : $info;
         my $fh;
         unless (open $fh, "<", $file) {
                 print "$file: $!\n";
@@ -79,8 +84,8 @@ while (<$files>) {
         else {
                 $encoding = $decoder;
         }
-        unless (grep { $encoding eq $_ } @canonical_allowed) {
-                print "$file: $encoding\n";
+        unless (grep { $encoding eq $_ } canonical_allowed($allowed)) {
+                print "$file: $encoding ($allowed)\n";
                 $failed++;
         }
 }
@@ -88,6 +93,7 @@ while (<$files>) {
 close $files;
 
 if ($failed > 0) {
-        print "Commit aborted! (allowed encodings: @allowed)\n";
+        print "Commit aborted!";
+        print "  (Use \"git commit --no-verify\" to skip this)\n";
         exit 1;
 }
