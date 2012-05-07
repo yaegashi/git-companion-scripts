@@ -38,14 +38,44 @@ Directories and files:
 ### hooks/pre-commit-encoding
 
 Call this script from pre-commit hook `.git/hooks/pre-commit`.
-You can specify encodings allowed to be committed by script arguments,
-or by modifying `@allowed` variable in the script.
 
-It accepts emacs-like encoding notation like
-`utf-8` `utf-8-unix` `utf-8-with-signature-unix`.
+You can specify encodings allowed to be committed for each file pattern by
+writing `encoding` or `encoding=ENCODINGS` on it in `.gitattributes`.
+ENCODINGS is an optional parameter of comma-separated encodings.
 
-Specifying no newline character means 'dont care.'
-Any newline characters will be accepted.
+The script accepts emacs-like encoding notation like `utf-8` `utf-8-dos`
+`utf-8-with-signature-unix` and so on.  No newline character specifier
+(`-unix` `-dos` `-mac`) means 'dont care' - any newline characters will be
+accepted.
+
+If `encoding` attribute without any ENCODINGS parameter is specified, default
+encodings will be used.  The default encodings can be specified by a script
+argument or `$default_encoding` variable in the script.
+
+Some `.gitattributes` examples:
+
+    # Force ascii on log files.
+    *.log encoding=ascii
+
+    # Specify default encodings on text files.
+    *.txt encoding
+
+    # Specify a macro for encodings MSVC can process.
+    [attr]msvc encoding=ascii-dos,utf-8-with-signature-dos
+    *.c msvc
+    *.h msvc
+    *.cpp msvc
+
+When running `git commit`, the script checks that each staged file has valid
+encoding characters, valid newline characters, or UTF-8 BOM character prior to
+the commit.  If any infringement found the commit will be aborted.
+
+    % git add hoge.c
+    % git commit
+    hoge.c: utf8-unix (ascii-dos,utf-8-with-signature-dos)
+    Commit aborted!  (Use "git commit --no-verify" to skip this)
+
+Use `git commit --no-verify` to skip checks by the pre-commit script.
 
 ### utils/ipconv
 
