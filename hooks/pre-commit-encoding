@@ -29,7 +29,7 @@ Encode::Guess->set_suspects(@possible);
 $default_allowed = shift @ARGV if @ARGV > 0;
 
 sub canonical_allowed {
-        my $_ = shift;
+        local $_ = shift;
         my @args = split /,/;
         my @ca = ();
         for (@args) {
