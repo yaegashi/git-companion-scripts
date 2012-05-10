@@ -6,15 +6,18 @@
 
 # Works with Perl 5.8.  The bundled perl in msysgit is also supported.
 
-# Default encodings allowed to be committed.
-# See http://search.cpan.org/perldoc?Encode::Supported
+# The script uses Encode module to support various text encodings.
+# See http://search.cpan.org/perldoc?Encode::Supported for details.
 # They can be followed by the following suffixes:
 #   UTF-8 with BOM: -with-signature
 #   Newline characters: -dos or -mac or -unix
+# You can specify multiple encoding specifications separated by commas.
 # Examples:
-#   ascii utf-8 (any newline characters allowed)
-#   ascii-dos utf-8-with-signature-dos
-#   utf-16 utf-16-be utf-16-le
+#   ascii,utf-8 (any newline characters allowed)
+#   ascii-dos,utf-8-with-signature-dos (only CRLF is allowed)
+#   utf-16,utf-16-be,utf-16-le
+
+# Default encodings allowed to be committed, comma separated.
 my $default_allowed = "ascii,utf-8";
 
 # Encodings possible to be seen.
