@@ -157,8 +157,8 @@ test_pre_commit_path_with_spaces() {
         echo "exec ./hooks/pre-commit-encoding" >>$PRE_COMMIT
         echo "en*.txt encoding=ascii" >>.gitattributes
         for i in fixtures/en*; do
-                cp "$i" "$(echo $i | sed -e 's/-/ /g')"
-        done
+                cp "$i" "$(echo $i | sed -e 's/-/ /g')" || return
+        done >/dev/null 2>&1
         git add fixtures
         git commit -q -m Commit
         assertTrue $?
@@ -168,8 +168,8 @@ test_pre_commit_path_with_colon_space_sequences() {
         echo "exec ./hooks/pre-commit-encoding" >>$PRE_COMMIT
         echo "en*.txt encoding=ascii" >>.gitattributes
         for i in fixtures/en*; do
-                cp "$i" "$(echo $i | sed -e 's/-/: /g')"
-        done
+                cp "$i" "$(echo $i | sed -e 's/-/: /g')" || return
+        done >/dev/null 2>&1
         git add fixtures
         git commit -q -m Commit
         assertFalse $?

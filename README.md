@@ -80,6 +80,7 @@ Use `git commit --no-verify` to skip checks by the pre-commit script.
 Limitations:
 
 * With older Git like v1.7.4, it won't work for an initial commit.
+* It cannot handle files whose names have the sequence "`: `" (COLON SPACE).
 
 ### utils/ipconv
 
