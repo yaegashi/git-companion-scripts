@@ -77,6 +77,10 @@ the commit.  If any infringement found the commit will be aborted.
 
 Use `git commit --no-verify` to skip checks by the pre-commit script.
 
+Limitations:
+
+* With older Git like v1.7.4, it won't work for an initial commit.
+
 ### utils/ipconv
 
 ipconv is in-place converter of text encoding and newline characters.

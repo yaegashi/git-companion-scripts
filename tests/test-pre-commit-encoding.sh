@@ -21,6 +21,10 @@ setUp() {
         echo "exec >pre-commit.log 2>&1" >>$PRE_COMMIT
         chmod +x $PRE_COMMIT
         git config core.autocrlf false
+        # Make a first commit before the test, or it fails with older Git.
+        touch .gitattributes
+        git add .gitattributes
+        git commit -m Initial >/dev/null
 }
 
 tearDown() {
