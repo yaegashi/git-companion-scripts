@@ -175,4 +175,24 @@ test_pre_commit_path_with_colon_space_sequences() {
         assertFalse $?
 }
 
+test_pre_commit_staged_contents_success() {
+        echo "exec ./hooks/pre-commit-encoding" >>$PRE_COMMIT
+        echo "hoge.txt encoding=ascii" >>.gitattributes
+        cp fixtures/en0-ascii-unknown.txt hoge.txt
+        git add hoge.txt
+        cp fixtures/ja0-utf8-unknown.txt hoge.txt
+        git commit -q -m Commit
+        assertTrue $?
+}
+
+test_pre_commit_staged_contents_failure() {
+        echo "exec ./hooks/pre-commit-encoding" >>$PRE_COMMIT
+        echo "hoge.txt encoding=ascii" >>.gitattributes
+        cp fixtures/ja0-utf8-unknown.txt hoge.txt
+        git add hoge.txt
+        cp fixtures/en0-ascii-unknown.txt hoge.txt
+        git commit -q -m Commit
+        assertFalse $?
+}
+
 . $SHUNIT2
