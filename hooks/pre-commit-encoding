@@ -54,7 +54,7 @@ sub canonical_allowed {
 
 my $failed = 0;
 
-open my $files, "git diff --cached --name-only --diff-filter=ACM | git check-attr --stdin encoding|";
+open my $files, "git diff --cached --name-only --diff-filter=ACM | git check-attr --stdin encoding |";
 
 while (<$files>) {
         chomp;
@@ -62,14 +62,19 @@ while (<$files>) {
         next if $info eq "unspecified" || $info eq "unset";
         my $allowed = $info eq "set" ? $default_allowed : $info;
         my $fh;
-        unless (open $fh, "<", $file) {
+        unless (open $fh, "-|", "git", "show", ":./".$file) {
                 print "$file: $!\n";
                 $failed++;
                 next;
         }
         binmode $fh;
-        read $fh, my $data, (-s $file);
+        my $data = do { local $/; <$fh> };
         close $fh;
+        unless ($? == 0) {
+                print "$file: Sub process failed.\n";
+                $failed++;
+                next;
+        }
         next unless length($data) > 0;
         my $decoder = Encode::Guess->guess($data);
         my $encoding;
