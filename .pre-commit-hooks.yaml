@@ -1,0 +1,5 @@
+-   id: pre-commit-encoding
+    name: Pre Commit Encoding
+    description: Prevent commiting in different encoding then specified.
+    entry: pre-commit-encoding
+    language: perl
